@@ -22,6 +22,7 @@ export class KupDataTableState implements KupState {
     groups: Array<GroupObject> = [];
     headerIsPersistent = true;
     lazyLoadRows = false;
+    legacyScroll = false;
     loadMoreLimit: number = 1000;
     selection = SelectionMode.SINGLE;
     rowsPerPage = 10;

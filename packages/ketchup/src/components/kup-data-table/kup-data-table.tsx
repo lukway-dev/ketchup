@@ -173,6 +173,7 @@ import { KupFormRow } from '../kup-form/kup-form-declarations';
 import { KupDatesFormats } from '../../managers/kup-dates/kup-dates-declarations';
 import { KupColumnMenuIds } from '../../utils/kup-column-menu/kup-column-menu-declarations';
 import { KupList } from '../kup-list/kup-list';
+import { table } from 'console';
 @Component({
     tag: 'kup-data-table',
     styleUrl: 'kup-data-table.scss',
@@ -208,6 +209,7 @@ export class KupDataTable {
                 this.loadMoreLimit = state.loadMoreLimit;
                 this.selection = state.selection;
                 this.rowsPerPage = state.rowsPerPage;
+                this.legacyScroll = state.legacyScroll;
                 this.showFilters = state.showFilters;
                 this.showGroups = state.showGroups;
                 this.showHeader = state.showHeader;
@@ -367,6 +369,15 @@ export class KupDataTable {
                 )
             ) {
                 this.state.rowsPerPage = this.currentRowsPerPage;
+                somethingChanged = true;
+            }
+            if (
+                !this.#kupManager.objects.deepEqual(
+                    this.state.legacyScroll,
+                    this.currentLegacyScroll
+                )
+            ) {
+                this.state.legacyScroll = this.currentLegacyScroll;
                 somethingChanged = true;
             }
             if (
@@ -630,6 +641,7 @@ export class KupDataTable {
      * @default false
      */
     @Prop() isFocusable: boolean = false;
+
     /**
      * When set to true, extra rows will be automatically loaded once the last row enters the viewport. When groups are present, the number of rows is referred to groups and not to their content. Paginator is disabled.
      */
@@ -638,6 +650,11 @@ export class KupDataTable {
      * Defines the placeholder character which will be replaced by a line break inside table header cells, normal or sticky.
      */
     @Prop() lineBreakCharacter: string = '\n';
+    /**
+     * When set to true, it will scroll at the bottom of the data table
+     * @default false
+     */
+    @Prop() legacyScroll: boolean = false;
     /**
      * Sets a maximum limit of new records which can be required by the load more functionality.
      */
@@ -768,6 +785,9 @@ export class KupDataTable {
     //-------- State --------
 
     @State()
+    private currentLegacyScroll = false;
+
+    @State()
     private lazyLoadCells = false;
 
     @State()
@@ -809,6 +829,18 @@ export class KupDataTable {
         this.currentRowsPerPage = newValue;
     }
 
+    @Watch('legacyScroll')
+    legacyScrollHandler(newValue: boolean) {
+        if (newValue === true) {
+            const root: ShadowRoot = this.rootElement.shadowRoot;
+            const wrapper: HTMLElement = root.querySelector('.below-wrapper');
+            console.log('wrapper', wrapper);
+            if (wrapper) {
+                wrapper.scrollTop = wrapper.scrollHeight; // Scroll to bottom of the wrapper, which contains the table
+            }
+        }
+    }
+
     @Watch('expandGroups')
     expandGroupsHandler() {
         if (!this.#isRestoringState) {
@@ -827,9 +859,11 @@ export class KupDataTable {
 
     @Watch('sort')
     @Watch('rowsPerPage')
+    @Watch('legacyScroll')
     @Watch('totals')
     @Watch('currentPage')
     @Watch('currentRowsPerPage')
+    @Watch('currentLegacyScroll')
     recalculateRows() {
         if (!this.#isRestoringState) {
             this.#initRows();
@@ -906,6 +940,7 @@ export class KupDataTable {
      * Reference for the thead element
      */
     #theadRef: any;
+
     #tableRef: HTMLTableElement;
 
     /**
@@ -2343,6 +2378,7 @@ export class KupDataTable {
             this.currentPage = this.pageSelected;
         }
         this.currentRowsPerPage = this.rowsPerPage;
+        this.currentLegacyScroll = this.legacyScroll;
         this.#isRestoringState = false;
 
         //this.identifyAndInitRows();
