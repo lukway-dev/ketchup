@@ -1383,34 +1383,43 @@ export class KupDataTable {
         const getGroupDepth = (): number => {
             const firstGroup = this.#rows[0];
             let maxDepth = 0;
+            let isRecordAndNotGroup: boolean = false;
 
             const traverseGroup = (
                 row: KupDataTableRow,
                 currentDepth: number
             ): void => {
                 const group = row.group;
-                if (row.hasOwnProperty('group')) {
+
+                if (row.hasOwnProperty('group') && group) {
+                    // Update maxDepth based on the current depth
+                    maxDepth = Math.max(maxDepth, currentDepth);
                     if (group.expanded) {
-                        maxDepth = Math.max(maxDepth, currentDepth);
-                        maxDepth += 1;
+                        for (
+                            let index = 0;
+                            index < group.children.length;
+                            index++
+                        ) {
+                            const child = group.children[index];
+                            traverseGroup(child, currentDepth + 1);
+                        }
                     }
-                    for (
-                        let index = 0;
-                        group && index < group.children.length;
-                        index++
-                    ) {
-                        const child = group.children[index];
-                        traverseGroup(child, currentDepth + 1);
-                    }
+                } else {
+                    // When no more group.children, we're at the deepest row with values
+                    maxDepth = Math.max(maxDepth, currentDepth + 1);
+                    isRecordAndNotGroup = true;
                 }
             };
 
             if (firstGroup) {
-                traverseGroup(firstGroup, 0);
+                traverseGroup(firstGroup, 1); // Start depth at 1
             }
-
+            if (isRecordAndNotGroup) {
+                modifier--;
+            }
             return maxDepth;
         };
+
         const paginatedStream = toStream();
 
         let maxDepth = getGroupDepth() + modifier;
